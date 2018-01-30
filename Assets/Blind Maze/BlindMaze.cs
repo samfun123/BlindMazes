@@ -24,12 +24,13 @@ public class BlindMaze : MonoBehaviour
     protected int MazeRot;
     private int currentMaze = -1;
 
-    protected bool SOLVED = true;
-    protected int MazeCode;
+    protected bool SOLVED = false;
     protected int LastDigit;
     protected string CurrentP = "";
     protected int CurX;
     protected int CurY;
+    protected int RotX;
+    protected int RotY;
     protected int SumNS;
     protected int SumEW;
     protected string[,] MazeWalls = new string[5, 5];
@@ -38,63 +39,58 @@ public class BlindMaze : MonoBehaviour
     protected int NumSouth;
     protected int NumWest;
     protected int MazeNumber;
+    protected string[] dir = new string[4];
 
     protected int REDKEY;
     protected bool NOYELLOW = true;
     protected int StartX;
     protected int StartY;
 
-    public string TwitchHelpMessage = "Use !{0} NWSE, !{0} nwse, !{0} ULDR, or !{0} uldr to move North West South East.";
+    private string TwitchHelpMessage = "Use !{0} NWSE, !{0} nwse, !{0} ULDR, or !{0} uldr to move North West South East. Use !{0} reset, or !{0} press reset to reset the maze back to starting position.";
+
+
 
     protected KMSelectable[] ProcessTwitchCommand(string TPInput)
     {
-        string tpinput = TPInput.ToLowerInvariant();
-        bool Incomp = false;
-        List<KMSelectable> Moves = new List<KMSelectable>();
-        if (tpinput == "reset")
+        TPInput = TPInput.ToLowerInvariant();
+        if (TPInput.Equals("reset") || TPInput.Equals("press reset"))
         {
-            Moves.Add(Reset);
+            return new KMSelectable[1] { Reset };
         }
-        else
-        {
 
-            foreach (char c in tpinput)
+        if (TPInput.StartsWith("move ") || TPInput.StartsWith("press ") || TPInput.StartsWith("walk ") || TPInput.StartsWith("submit "))
+        {
+            TPInput = TPInput.Substring(TPInput.IndexOf(" ", StringComparison.Ordinal) + 1);
+        }
+
+        List<KMSelectable> Moves = new List<KMSelectable>();
+        foreach (char c in TPInput)
+        {
+            switch (c)
             {
-                if (c == 'n' || c == 'u')
-                {
+                case 'n':
+                case 'u':
                     Moves.Add(North);
-                }
-                else if (c == 'e' || c == 'r')
-                {
+                    break;
+                case 'e':
+                case 'r':
                     Moves.Add(East);
-                }
-                else if (c == 's' || c == 'd')
-                {
+                    break;
+                case 's':
+                case 'd':
                     Moves.Add(South);
-                }
-                else if (c == 'w' || c == 'l')
-                {
+                    break;
+                case 'w':
+                case 'l':
                     Moves.Add(West);
-                }
-                else if (c == ' ')
-                {
-                }
-                else
-                {
-                    Moves.Clear();
-                    Incomp = true;
-                }
+                    break;
+                default:
+                    return null;
             }
         }
-        if (Incomp == false)
-        {
-            KMSelectable[] MovesArray = Moves.ToArray();
-            return MovesArray;
-        }
-        else
-        {
-            return null;
-        }
+        return Moves.Count > 0
+            ? Moves.ToArray()
+            : null;
     }
 
     int GetSolvedCount()
@@ -112,6 +108,7 @@ public class BlindMaze : MonoBehaviour
 
 
         Reset.OnInteract += HandlePressReset;
+        Reset.OnInteractEnded += HandleRelease;
         //check what the serial ends with and make an integer for it
         LastDigit = BombInfo.GetSerialNumberNumbers().Last();
 
@@ -121,136 +118,128 @@ public class BlindMaze : MonoBehaviour
         string ColEastName = "";
         string ColSouthName = "";
         string ColWestName = "";
-        if (ColNorth == 1)
+        switch (ColNorth)
         {
-            NumNorth = 1;
-            NorthMesh.material.color = Color.red;
-            REDKEY++;
-            ColNorthName = "red";
-        }
-        if (ColNorth == 2)
-        {
-            NumNorth = 5;
-            NorthMesh.material.color = Color.green;
-            ColNorthName = "green";
-        }
-        if (ColNorth == 3)
-        {
-            NumNorth = 2;
-            NorthMesh.material.color = Color.white;
-            ColNorthName = "white";
-        }
-        if (ColNorth == 4)
-        {
-            NumNorth = 2;
-            NorthMesh.material.color = Color.grey;
-            ColNorthName = "grey";
-        }
-        if (ColNorth == 5)
-        {
-            NumNorth = 3;
-            NorthMesh.material.color = Color.yellow;
-            NOYELLOW = false;
-            ColNorthName = "yellow";
+            case 1:
+                NumNorth = 1;
+                NorthMesh.material.color = Color.red;
+                REDKEY++;
+                ColNorthName = "red";
+                break;
+            case 2:
+                NumNorth = 5;
+                NorthMesh.material.color = Color.green;
+                ColNorthName = "green";
+                break;
+            case 3:
+                NumNorth = 2;
+                NorthMesh.material.color = Color.white;
+                ColNorthName = "white";
+                break;
+            case 4:
+                NumNorth = 2;
+                NorthMesh.material.color = Color.grey;
+                ColNorthName = "grey";
+                break;
+            case 5:
+                NumNorth = 3;
+                NorthMesh.material.color = Color.yellow;
+                NOYELLOW = false;
+                ColNorthName = "yellow";
+                break;
         }
 
-        if (ColEast == 1)
+        switch (ColEast)
         {
-            NumEast = 3;
-            EastMesh.material.color = Color.red;
-            REDKEY++;
-            ColEastName = "red";
-        }
-        if (ColEast == 2)
-        {
-            NumEast = 1;
-            EastMesh.material.color = Color.green;
-            ColEastName = "green";
-        }
-        if (ColEast == 3)
-        {
-            NumEast = 5;
-            EastMesh.material.color = Color.white;
-            ColEastName = "white";
-        }
-        if (ColEast == 4)
-        {
-            NumEast = 5;
-            EastMesh.material.color = Color.grey;
-            ColEastName = "grey";
-        }
-        if (ColEast == 5)
-        {
-            NumEast = 2;
-            EastMesh.material.color = Color.yellow;
-            NOYELLOW = false;
-            ColEastName = "yellow";
+            case 1:
+                NumEast = 3;
+                EastMesh.material.color = Color.red;
+                REDKEY++;
+                ColEastName = "red";
+                break;
+            case 2:
+                NumEast = 1;
+                EastMesh.material.color = Color.green;
+                ColEastName = "green";
+                break;
+            case 3:
+                NumEast = 5;
+                EastMesh.material.color = Color.white;
+                ColEastName = "white";
+                break;
+            case 4:
+                NumEast = 5;
+                EastMesh.material.color = Color.grey;
+                ColEastName = "grey";
+                break;
+            case 5:
+                NumEast = 2;
+                EastMesh.material.color = Color.yellow;
+                NOYELLOW = false;
+                ColEastName = "yellow";
+                break;
         }
 
-        if (ColSouth == 1)
+        switch (ColSouth)
         {
-            NumSouth = 3;
-            SouthMesh.material.color = Color.red;
-            REDKEY++;
-            ColSouthName = "red";
-        }
-        if (ColSouth == 2)
-        {
-            NumSouth = 2;
-            SouthMesh.material.color = Color.green;
-            ColSouthName = "green";
-        }
-        if (ColSouth == 3)
-        {
-            NumSouth = 4;
-            SouthMesh.material.color = Color.white;
-            ColSouthName = "white";
-        }
-        if (ColSouth == 4)
-        {
-            NumSouth = 3;
-            SouthMesh.material.color = Color.grey;
-            ColSouthName = "grey";
-        }
-        if (ColSouth == 5)
-        {
-            NumSouth = 2;
-            SouthMesh.material.color = Color.yellow;
-            NOYELLOW = false;
-            ColSouthName = "yellow";
+            case 1:
+                NumSouth = 3;
+                SouthMesh.material.color = Color.red;
+                REDKEY++;
+                ColSouthName = "red";
+                break;
+            case 2:
+                NumSouth = 2;
+                SouthMesh.material.color = Color.green;
+                ColSouthName = "green";
+                break;
+            case 3:
+                NumSouth = 4;
+                SouthMesh.material.color = Color.white;
+                ColSouthName = "white";
+                break;
+            case 4:
+                NumSouth = 3;
+                SouthMesh.material.color = Color.grey;
+                ColSouthName = "grey";
+                break;
+            case 5:
+                NumSouth = 2;
+                SouthMesh.material.color = Color.yellow;
+                NOYELLOW = false;
+                ColSouthName = "yellow";
+                break;
         }
 
-        if (ColWest == 1)
+        switch (ColWest)
         {
-            NumWest = 2;
-            WestMesh.material.color = Color.red;
-            REDKEY++;
-            ColWestName = "red";
-        }
-        if (ColWest == 2)
-        {
-            NumWest = 5;
-            WestMesh.material.color = Color.green;
-            ColWestName = "green";
-        }
-        if (ColWest == 3)
-        {
-            NumWest = 3;
-            WestMesh.material.color = Color.white;
-            ColWestName = "white";
-        }
-        if (ColWest == 4)
-        {
-            NumWest = 1;
-            WestMesh.material.color = Color.grey;
-            ColWestName = "grey";
-        }
-        if (ColWest == 5)
-        {
-            NumWest = 4;
-            WestMesh.material.color = Color.yellow;
-            NOYELLOW = false;
-            ColWestName = "yellow";
+            case 1:
+                NumWest = 2;
+                WestMesh.material.color = Color.red;
+                REDKEY++;
+                ColWestName = "red";
+                break;
+            case 2:
+                NumWest = 5;
+                WestMesh.material.color = Color.green;
+                ColWestName = "green";
+                break;
+            case 3:
+                NumWest = 3;
+                WestMesh.material.color = Color.white;
+                ColWestName = "white";
+                break;
+            case 4:
+                NumWest = 1;
+                WestMesh.material.color = Color.grey;
+                ColWestName = "grey";
+                break;
+            case 5:
+                NumWest = 4;
+                WestMesh.material.color = Color.yellow;
+                NOYELLOW = false;
+                ColWestName = "yellow";
+                break;
         }
 
         //Look for mazebased modules
@@ -269,7 +258,7 @@ public class BlindMaze : MonoBehaviour
         if (BombInfo.GetModuleNames().Contains("Polyhedral Maze"))
         { MazeBased++; }
 
-        
+
         //determine rotation
         int MazeRule;
         if (BombInfo.GetBatteryCount(KMBI.KnownBatteryType.D) == 1 && BombInfo.GetBatteryCount(KMBI.KnownBatteryType.AA) == 0)
@@ -318,6 +307,7 @@ public class BlindMaze : MonoBehaviour
             East.OnInteract += HandlePressE;
             South.OnInteract += HandlePressS;
             West.OnInteract += HandlePressW;
+            dir = new string[] { "North", "East", "South", "West"};
             CurX = SumNS;
             CurY = SumEW;
         }
@@ -327,6 +317,7 @@ public class BlindMaze : MonoBehaviour
             East.OnInteract += HandlePressN;
             South.OnInteract += HandlePressE;
             West.OnInteract += HandlePressS;
+            dir = new string[] { "East", "South", "West", "North" };
             CurX = SumEW;
             CurY = 4 - SumNS;
         }
@@ -336,6 +327,7 @@ public class BlindMaze : MonoBehaviour
             East.OnInteract += HandlePressW;
             South.OnInteract += HandlePressN;
             West.OnInteract += HandlePressE;
+            dir = new string[] { "South", "West", "North", "East" };
             CurX = 4 - SumNS;
             CurY = 4 - SumEW;
         }
@@ -345,9 +337,16 @@ public class BlindMaze : MonoBehaviour
             East.OnInteract += HandlePressS;
             South.OnInteract += HandlePressW;
             West.OnInteract += HandlePressN;
+            dir = new string[] { "West", "North", "East", "South" };
             CurX = 4 - SumEW;
             CurY = SumNS;
         }
+
+        North.OnInteractEnded += HandleRelease;
+        East.OnInteractEnded += HandleRelease;
+        South.OnInteractEnded += HandleRelease;
+        West.OnInteractEnded += HandleRelease;
+
         StartX = CurX;
         StartY = CurY;
         DebugLog("Maze Rotation is {0} degrees clockwise because of rule {1}", MazeRot * 9 - 90, MazeRule);
@@ -359,34 +358,63 @@ public class BlindMaze : MonoBehaviour
         DebugLog("Starting Location is [{0},{1}]", SumNS + 1, SumEW + 1);
     }
 
+    protected void ButtonRotation(int x,int y)
+    {
+        switch (MazeRot)
+        {
+            case 10:
+                RotX = x + 1;
+                RotY = y + 1;
+                break;
+            case 20:
+                RotX = 5 - y;
+                RotY = x + 1;
+                break;
+            case 30:
+                RotX = 5 - x;
+                RotY = 5 - y;
+                break;
+            case 40:
+                RotX = y + 1;
+                RotY = 5 - x;
+                break;
+        }
+    }
+
+    protected void HandleRelease()
+    {
+        Audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.ButtonRelease, transform);
+    }
+
+    protected bool ExitedMaze(string direction,string Dir)
+    {
+        if (!CurrentP.Contains(direction.Substring(0, 1))) return false;
+
+        BombModule.HandlePass();
+        SOLVED = true;
+        DebugLog("Moving {0}: The module has been defused.", Dir);
+        return true;
+    }
+
     protected bool HandlePressN()
     {
         Audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.ButtonPress, transform);
         North.AddInteractionPunch(0.5f);
 
-        if (SOLVED)
-        {
-            if (CurrentP.Contains("N"))
-            {
-                {
-                    BombModule.HandlePass();
-                    SOLVED = false;
-                    DebugLog("The module has been defused.");
-                }
-            }
-            else
-            {
-                if (CurrentP.Contains("U"))
-                {
-                    BombModule.HandleStrike();
-                }
-                else
-                {
-                    CurY--;
-                    DebugLog("X = {0}, Y = {1}", CurX + 1, CurY + 1);
-                }
+        if (SOLVED || ExitedMaze("North",dir[0])) return false;
 
-            }
+        if (CurrentP.Contains("U"))
+        {
+            ButtonRotation(CurX, CurY);
+            DebugLog("There is a wall to the {0} at X = {1}, Y = {2}. Strike", dir[0], RotX, RotY);
+            BombModule.HandleStrike();
+        }
+        else
+        {
+            CurY--;
+            CurrentP = MazeWalls[CurY, CurX];
+            ButtonRotation(CurX, CurY);
+            DebugLog("Moving {0}: X = {1}, Y = {2}", dir[0], RotX, RotY);
         }
         return false;
     }
@@ -396,18 +424,20 @@ public class BlindMaze : MonoBehaviour
         Audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.ButtonPress, transform);
         East.AddInteractionPunch(0.5f);
 
-        if (SOLVED)
-        {
+        if (SOLVED || ExitedMaze("East",dir[1])) return false;
 
-            if (CurrentP.Contains("R"))
-            {
-                BombModule.HandleStrike();
-            }
-            else
-            {
-                CurX++;
-                DebugLog("X = {0}, Y = {1}", CurX + 1, CurY + 1);
-            }
+        if (CurrentP.Contains("R"))
+        {
+            ButtonRotation(CurX, CurY);
+            DebugLog("There is a wall to the {0} at X = {1}, Y = {2}. Strike.", dir[1], RotX, RotY);
+            BombModule.HandleStrike();
+        }
+        else
+        {
+            CurX++;
+            CurrentP = MazeWalls[CurY, CurX];
+            ButtonRotation(CurX, CurY);
+            DebugLog("Moving {0}: X = {1}, Y = {2}", dir[1], RotX, RotY);
         }
 
         return false;
@@ -418,18 +448,20 @@ public class BlindMaze : MonoBehaviour
         Audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.ButtonPress, transform);
         South.AddInteractionPunch(0.5f);
 
-        if (SOLVED)
-        {
+        if (SOLVED || ExitedMaze("South",dir[2])) return false;
 
-            if (CurrentP.Contains("D"))
-            {
-                BombModule.HandleStrike();
-            }
-            else
-            {
-                CurY = CurY + 1;
-                DebugLog("X = {0}, Y = {1}", CurX + 1, CurY + 1);
-            }
+        if (CurrentP.Contains("D"))
+        {
+            ButtonRotation(CurX, CurY);
+            DebugLog("There is a wall to the {0} at X = {1}, Y = {2}. Strike.", dir[2], RotX, RotY);
+            BombModule.HandleStrike();
+        }
+        else
+        {
+            CurY = CurY + 1;
+            CurrentP = MazeWalls[CurY, CurX];
+            ButtonRotation(CurX, CurY);
+            DebugLog("Moving {0}: X = {1}, Y = {2}", dir[2], RotX, RotY);
         }
         return false;
     }
@@ -439,18 +471,20 @@ public class BlindMaze : MonoBehaviour
         Audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.ButtonPress, transform);
         West.AddInteractionPunch(0.5f);
 
-        if (SOLVED)
-        {
+        if (SOLVED || ExitedMaze("West",dir[3])) return false;
 
-            if (CurrentP.Contains("L"))
-            {
-                BombModule.HandleStrike();
-            }
-            else
-            {
-                CurX = CurX - 1;
-                DebugLog("X = {0}, Y = {1}", CurX + 1, CurY + 1);
-            }
+        if (CurrentP.Contains("L"))
+        {
+            ButtonRotation(CurX, CurY);
+            DebugLog("There is a wall to the {0} at X = {1}, Y = {2}. Strike.", dir[3], RotX, RotY);
+            BombModule.HandleStrike();
+        }
+        else
+        {
+            CurX = CurX - 1;
+            CurrentP = MazeWalls[CurY, CurX];
+            ButtonRotation(CurX, CurY);
+            DebugLog("Moving {0}: X = {1}, Y = {2}", dir[3], RotX, RotY);
         }
         return false;
     }
@@ -459,129 +493,122 @@ public class BlindMaze : MonoBehaviour
     {
         Audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.ButtonPress, transform);
         Reset.AddInteractionPunch(0.5f);
+        if (SOLVED) return false;
 
-        if (SOLVED)
-        {
-            CurX = StartX;
-            CurY = StartY;
-        }
-
+        CurX = StartX;
+        CurY = StartY;
+        DebugLog("Current location reset back to Starting location: X = {0}, Y = {1}", SumNS + 1, SumEW + 1);
         return false;
     }
 
     private void Update()
     {
+        if (currentMaze == GetSolvedCount() || SOLVED) return;
+        currentMaze = GetSolvedCount();
         MazeNumber = (LastDigit + GetSolvedCount()) % 10;
-        if (currentMaze != GetSolvedCount() && SOLVED)
-        {
-            currentMaze = GetSolvedCount();
-            DebugLog("The Maze Number is now {0}", MazeNumber);
-        }
+        DebugLog("The Maze Number is now {0}", MazeNumber);
+        UpdateMaze();
+    }
 
-        if (MazeNumber == 1)
+    private void UpdateMaze()
+    {
+        switch (MazeNumber)
         {
-            MazeWalls = new string[5, 5] {
-                 { "U D L", "U R", "N R L", "U L", "U R" },
-                 { "U L", "D", "R D", "R L", "R D L" },
-                 { "L", "U", "U D", "D", "U R" },
-                 { "R L", "R D L", "U R L", "U D L", "R" },
-                 { "D L", "U D", "R D", "U D L", "R D" }
-            };
-        }
-        if (MazeNumber == 0)
-        {
-            MazeWalls = new string[5, 5] {
-                 { "U L", "U", "N D R", "L U", "U R" },
-                 { "L R", "D L ", "U", "D R", "L R" },
-                 { "L D", "U R", "L D", "U R", "L D R" },
-                 { "L U", "R", "L U R", "D L", "U R" },
-                 { "D L R", "L D", "D R", "D U L", "R D" }
-            };
-        }
-        if (MazeNumber == 2)
-        {
-            MazeWalls = new string[5, 5] {
-                 { "U L", "U R D", "N L", "U R D", "L U R" },
-                 { "L D", "U D", "D", "U D", "R" },
-                 { "L U D", "U", "U", "U", "D R" },
-                 { "L U R", "R L", "R L", "L D", "U R" },
-                 { "D L", "D R", "L D", "U D R", "L R D" }
-            };
-        }
-        if (MazeNumber == 3)
-        {
-            MazeWalls = new string[5, 5] {
-                 { "U L D", "U R", "L N D", "U", "U R" },
-                 { "L U", "D", "D U", "D R", "L R" },
-                 { "L", "U R", "U L", "U", "R D" },
-                 { "L D R", "L R D", "R L", "L", "U R" },
-                 { "D L U", "D U", " D R", "L D R", " L D R" }
-            };
-        }
-        if (MazeNumber == 4)
-        {
-            MazeWalls = new string[5, 5] {
-                 { "U L",   "U",     "N D",   "U R", "L U R" },
-                 { "L D R", "L R",   "L U R", "L D", "R" },
-                 { "L U",   "D",     "D R",   "L U", "D R" },
-                 { "L R",   "U D L", "R U",   "D L", "R U" },
-                 { "D L",   "U D R",     "D L",     "U D", "R D" }
-            };
-        }
-        if (MazeNumber == 5)
-        {
-            MazeWalls = new string[5, 5] {
-                 { "U L",   "U R", "L D N", "U D",   "U R"   },
-                 { "L R",   "L",   "U R D", "U L",   "D R"   },
-                 { "L R",   "L",   "U D",   "",      "U R"   },
-                 { "L R D", "L R", "U L",   "R D",   "L R"   },
-                 { "D L U", "R D", "D L",   "D U R", "L R D" }
-            };
-        }
-        if (MazeNumber == 6)
-        {
-            MazeWalls = new string[5, 5] {
-                 { "U L", "U", "N D", "U D", "U R"},
-                 { "L R", "L D R", "L U", "U R", "L R"},
-                 { "L R", "U D L", "D R", "L", "R"},
-                 { "L D", "U R", "U D L", "R D", "L R"},
-                 { "D L U", "D", "D R U", "D L U", "R D"}
-            };
-        }
-        if (MazeNumber == 7)
-        {
-            MazeWalls = new string[5, 5] {
-                 { "U L D", "U R",   "R N L", "U L R", "L U R" },
-                 { "L U",   "R",     "R L",   "L",     "D R" },
-                 { "L R",   "L D",   "R",     "L D",   "U R" },
-                 { "L R",   "L R U", "L D",   "U R",   "L R" },
-                 { "D L R", "L D",   "U D",   "D",     "R D" }
-            };
-        }
-        if (MazeNumber == 8)
-        {
-            MazeWalls = new string[5, 5] {
-                 { "U L",   "U D",   "N R",   "U L",   "U R D" },
-                 { "L R",   "U L",   "D",     "D",     "U R" },
-                 { "L R",   "L D",   "U R D", "U L D", "R" },
-                 { "L D",   "U R D", "U L",   "U R",   "L R" },
-                 { "D L U", "U D",   "D R",   "L D",   "R D" }
-            };
-        }
-        if (MazeNumber == 9)
-        {
-            MazeWalls = new string[5, 5] {
-                 { "U L R", "L U D", "N R", "L U", "U R"   },
-                 { "L D",   "U R",   "L R", "L R", "L R D" },
-                 { "L U R", "D L",   "D",   "",    "D R"     },
-                 { "L",     "U R",   "U L", "",    "U D R"     },
-                 { "D L R", "D L",   "D R", "D",   "U R D"   }
-            };
+            case 1:
+                MazeWalls = new string[5, 5] {
+                    { "U D L", "U R", "N R L", "U L", "U R" },
+                    { "U L", "D", "R D", "R L", "R D L" },
+                    { "L", "U", "U D", "D", "U R" },
+                    { "R L", "R D L", "U R L", "U D L", "R" },
+                    { "D L", "U D", "R D", "U D L", "R D" }
+                };
+                break;
+            case 0:
+                MazeWalls = new string[5, 5] {
+                    { "U L", "U", "N D R", "L U", "U R" },
+                    { "L R", "D L ", "U", "D R", "L R" },
+                    { "L D", "U R", "L D", "U R", "L D R" },
+                    { "L U", "R", "L U R", "D L", "U R" },
+                    { "D L R", "L D", "D R", "D U L", "R D" }
+                };
+                break;
+            case 2:
+                MazeWalls = new string[5, 5] {
+                    { "U L", "U R D", "N L", "U R D", "L U R" },
+                    { "L D", "U D", "D", "U D", "R" },
+                    { "L U D", "U", "U", "U", "D R" },
+                    { "L U R", "R L", "R L", "L D", "U R" },
+                    { "D L", "D R", "L D", "U D R", "L R D" }
+                };
+                break;
+            case 3:
+                MazeWalls = new string[5, 5] {
+                    { "U L D", "U R", "L N D", "U", "U R" },
+                    { "L U", "D", "D U", "D R", "L R" },
+                    { "L", "U R", "U L", "U", "R D" },
+                    { "L D R", "L R D", "R L", "L", "U R" },
+                    { "D L U", "D U", " D R", "L D R", " L D R" }
+                };
+                break;
+            case 4:
+                MazeWalls = new string[5, 5] {
+                    { "U L",   "U",     "N D",   "U R", "L U R" },
+                    { "L D R", "L R",   "L U R", "L D", "R" },
+                    { "L U",   "D",     "D R",   "L U", "D R" },
+                    { "L R",   "U D L", "R U",   "D L", "R U" },
+                    { "D L",   "U D R",     "D L",     "U D", "R D" }
+                };
+                break;
+            case 5:
+                MazeWalls = new string[5, 5] {
+                    { "U L",   "U R", "L D N", "U D",   "U R"   },
+                    { "L R",   "L",   "U R D", "U L",   "D R"   },
+                    { "L R",   "L",   "U D",   "",      "U R"   },
+                    { "L R D", "L R", "U L",   "R D",   "L R"   },
+                    { "D L U", "R D", "D L",   "D U R", "L R D" }
+                };
+                break;
+            case 6:
+                MazeWalls = new string[5, 5] {
+                    { "U L", "U", "N D", "U D", "U R"},
+                    { "L R", "L D R", "L U", "U R", "L R"},
+                    { "L R", "U D L", "D R", "L", "R"},
+                    { "L D", "U R", "U D L", "R D", "L R"},
+                    { "D L U", "D", "D R U", "D L U", "R D"}
+                };
+                break;
+            case 7:
+                MazeWalls = new string[5, 5] {
+                    { "U L D", "U R",   "R N L", "U L R", "L U R" },
+                    { "L U",   "R",     "R L",   "L",     "D R" },
+                    { "L R",   "L D",   "R",     "L D",   "U R" },
+                    { "L R",   "L R U", "L D",   "U R",   "L R" },
+                    { "D L R", "L D",   "U D",   "D",     "R D" }
+                };
+                break;
+            case 8:
+                MazeWalls = new string[5, 5] {
+                    { "U L",   "U D",   "N R",   "U L",   "U R D" },
+                    { "L R",   "U L",   "D",     "D",     "U R" },
+                    { "L R",   "L D",   "U R D", "U L D", "R" },
+                    { "L D",   "U R D", "U L",   "U R",   "L R" },
+                    { "D L U", "U D",   "D R",   "L D",   "R D" }
+                };
+                break;
+            case 9:
+                MazeWalls = new string[5, 5] {
+                    { "U L R", "L U D", "N R", "L U", "U R"   },
+                    { "L D",   "U R",   "L R", "L R", "L R D" },
+                    { "L U R", "D L",   "D",   "",    "D R"     },
+                    { "L",     "U R",   "U L", "",    "U D R"     },
+                    { "D L R", "D L",   "D R", "D",   "U R D"   }
+                };
+                break;
         }
 
 
         CurrentP = MazeWalls[CurY, CurX];
-    }
+}
 
     private void DebugLog(string log, params object[] args)
     {

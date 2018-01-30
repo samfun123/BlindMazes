@@ -1292,8 +1292,6 @@ MonoBehaviour:
   EastMesh: {fileID: 23806518553168994}
   SouthMesh: {fileID: 23624080906926204}
   WestMesh: {fileID: 23590854001775548}
-  TwitchHelpMessage: Use !{0} NWSE, !{0} nwse, !{0} ULDR, or !{0} uldr to move North
-    West South East.
 --- !u!114 &114016167573626778
 MonoBehaviour:
   m_ObjectHideFlags: 1
