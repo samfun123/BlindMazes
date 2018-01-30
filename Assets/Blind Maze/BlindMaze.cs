@@ -44,7 +44,9 @@ public class BlindMaze : MonoBehaviour
 	string CurrentP = "";
 	int CurX;
 	int CurY;
-	string[,] MazeWalls = new string[5, 5];
+    int RotX;
+    int RotY;
+    string[,] MazeWalls = new string[5, 5];
 
 	int StartX;
 	int StartY;
@@ -128,7 +130,18 @@ public class BlindMaze : MonoBehaviour
 	{
 		List<KMSelectable> Buttons = new List<KMSelectable>();
 
-		string cleanInput = input.ToLowerInvariant().Replace(" ", "");
+		string cleanInput = input.ToLowerInvariant();
+
+        if (cleanInput.Equals("reset") || cleanInput.Equals("press reset"))
+        {
+            return new KMSelectable[1] { Reset };
+        }
+
+        if (cleanInput.StartsWith("move ") || cleanInput.StartsWith("press ") || cleanInput.StartsWith("walk ") || cleanInput.StartsWith("submit "))
+        {
+            cleanInput = cleanInput.Substring(cleanInput.IndexOf(" ", System.StringComparison.Ordinal) + 1);
+        }
+       
 		foreach (char character in cleanInput)
 		{
 			switch (character)
@@ -162,7 +175,7 @@ public class BlindMaze : MonoBehaviour
 		return BombInfo.GetSolvedModuleNames().Count;
 	}
 
-	void UpdatePosition(int xOffset = 0, int yOffset = 0, bool log = false)
+	void UpdatePosition(string Direction = "North", int xOffset = 0, int yOffset = 0, bool log = false)
 	{
 		CurX += xOffset;
 		CurY += yOffset;
@@ -171,12 +184,15 @@ public class BlindMaze : MonoBehaviour
 		{
 			BombModule.HandlePass();
 			Solved = true;
-			DebugLog("Module defused");
+			DebugLog("Moving {0}: The module has been defused.", Direction);
+            //DebugLog("Moving North, the module has been defused.");
 		}
 		else
 		{
+            ButtonRotation(CurX, CurY);
 			CurrentP = MazeWalls[CurY, CurX];
-			if (log) DebugLog("Moved to ({0}, {1})", CurX + 1, CurY + 1);
+            if (log) DebugLog("Moving {0}: ({1}, {2})", Direction, RotX, RotY);
+            //if (log) DebugLog("Moving {0}: ({1}, {2} on original rotation.", Direction, CurX, CurY);
 		}
 	}
 
@@ -289,7 +305,7 @@ public class BlindMaze : MonoBehaviour
 
 		Reset.OnInteract += GetInteractHandler(Reset, new ButtonInfo(0, 0, null, true));
 
-		//Determine Current Position
+        //Determine Starting Position
 		switch (MazeRot)
 		{
 			case 0:
@@ -303,19 +319,43 @@ public class BlindMaze : MonoBehaviour
 			case 2:
 				CurX = 4 - SumNS;
 				CurY = 4 - SumEW;
-				break;
+                break;
 			case 3:
 				CurX = 4 - SumEW;
 				CurY = SumNS;
-				break;
+                break;
 		}
 		UpdatePosition();
 
 		StartX = CurX;
 		StartY = CurY;
 
-		DebugLog("Rotated starting location is ({0}, {1}). Non-rotated is ({2}, {3})", SumNS + 1, SumEW + 1, CurX, CurY);
+		DebugLog("Starting location is ({0}, {1}).", SumNS + 1, SumEW + 1);
+        //DebugLog("Non-Rotation values for debugging are: {0}, {1}", CurX + 1, CurY + 1);
 	}
+
+    void ButtonRotation(int x, int y)
+    {
+        switch (MazeRot)
+        {
+            case 0:
+                RotX = x + 1;
+                RotY = y + 1;
+                break;
+            case 1:
+                RotX = 5 - y;
+                RotY = x + 1;
+                break;
+            case 2:
+                RotX = 5 - x;
+                RotY = 5 - y;
+                break;
+            case 3:
+                RotX = y + 1;
+                RotY = 5 - x;
+                break;
+        }
+    }
 
 	KMSelectable.OnInteractHandler GetInteractHandler(KMSelectable selectable, ButtonInfo buttonInfo)
 	{
@@ -323,20 +363,28 @@ public class BlindMaze : MonoBehaviour
 		{
 			Audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.ButtonPress, transform);
 			selectable.AddInteractionPunch(0.5f);
+            string Direction = selectable.ToString().Split(' ').First();
 
 			if (!Solved)
 			{
-				if (buttonInfo.resetButton)
-				{
-					CurX = StartX;
-					CurY = StartY;
-					UpdatePosition();
-					DebugLog("Resetted, now at ({0}, {1})", CurX + 1, CurY + 1);
-				}
-				else if (CurrentP.Contains(buttonInfo.invalidDirection))
-					BombModule.HandleStrike();
-				else
-					UpdatePosition(buttonInfo.xOffset, buttonInfo.yOffset, true);
+                if (buttonInfo.resetButton)
+                {
+                    CurX = StartX;
+                    CurY = StartY;
+                    UpdatePosition();
+                    ButtonRotation(CurX, CurY);
+                    DebugLog("Resetted, now at ({0}, {1})", RotX, RotY);
+                    //DebugLog("Resetted, now at ({0}, {1})", CurX + 1, CurY + 1);
+                }
+                else if (CurrentP.Contains(buttonInfo.invalidDirection))
+                {
+                    ButtonRotation(CurX, CurY);
+                    DebugLog("There is a wall to the {0} at ({1}, {2}). Strike.", Direction, RotX, RotY);
+                    //DebugLog("There is a wall at {1}, {2}, and it doesn't match the manual. SOMEone should fix this.", CurX + 1, CurY + 1);
+                    BombModule.HandleStrike();
+                }
+                else
+                    UpdatePosition(Direction, buttonInfo.xOffset, buttonInfo.yOffset, true);
 			}
 
 			return false;
