@@ -1,591 +1,363 @@
 ﻿using KMBombInfoExtensions;
-using System;
 using UnityEngine;
 using System.Linq;
 using System.Collections.Generic;
 
+class ButtonInfo
+{
+	public int xOffset;
+	public int yOffset;
+	public string invalidDirection;
+	public bool resetButton;
+
+	public ButtonInfo(int x, int y, string dir, bool reset = false)
+	{
+		xOffset = x;
+		yOffset = y;
+		invalidDirection = dir;
+		resetButton = reset;
+	}
+}
+
 public class BlindMaze : MonoBehaviour
 {
-    private static int BlindMaze_moduleIdCounter = 1;
-    private int BlindMaze_moduleId;
-    public KMBombInfo BombInfo;
-    public KMBombModule BombModule;
-    public KMAudio Audio;
-    public KMSelectable North;
-    public KMSelectable East;
-    public KMSelectable South;
-    public KMSelectable West;
-    public KMSelectable Reset;
-    public MeshRenderer NorthMesh;
-    public MeshRenderer EastMesh;
-    public MeshRenderer SouthMesh;
-    public MeshRenderer WestMesh;
-    protected int MazeBased = 0;
-    protected int MazeRot;
-    private int currentMaze = -1;
+	private static int moduleIdCounter = 1;
+	private int moduleId;
+	public KMBombInfo BombInfo;
+	public KMBombModule BombModule;
+	public KMAudio Audio;
+	public KMSelectable North;
+	public KMSelectable East;
+	public KMSelectable South;
+	public KMSelectable West;
+	public KMSelectable Reset;
+	public MeshRenderer NorthMesh;
+	public MeshRenderer EastMesh;
+	public MeshRenderer SouthMesh;
+	public MeshRenderer WestMesh;
+	int MazeRot;
+	int currentMaze = -1;
 
-    protected bool SOLVED = true;
-    protected int MazeCode;
-    protected int LastDigit;
-    protected string CurrentP = "";
-    protected int CurX;
-    protected int CurY;
-    protected int SumNS;
-    protected int SumEW;
-    protected string[,] MazeWalls = new string[5, 5];
-    protected int NumNorth;
-    protected int NumEast;
-    protected int NumSouth;
-    protected int NumWest;
-    protected int MazeNumber;
+	bool Solved = false;
+	int MazeCode;
+	int LastDigit;
+	string CurrentP = "";
+	int CurX;
+	int CurY;
+	string[,] MazeWalls = new string[5, 5];
 
-    protected int REDKEY;
-    protected bool NOYELLOW = true;
-    protected int StartX;
-    protected int StartY;
+	int StartX;
+	int StartY;
 
-    public string TwitchHelpMessage = "Use !{0} NWSE, !{0} nwse, !{0} ULDR, or !{0} uldr to move North West South East.";
+	private List<string[,]> Mazes = new List<string[,]> {
+		new string[5, 5] {
+			{ "U L", "U", "N D R", "L U", "U R" },
+			{ "L R", "D L ", "U", "D R", "L R" },
+			{ "L D", "U R", "L D", "U R", "L D R" },
+			{ "L U", "R", "L U R", "D L", "U R" },
+			{ "D L R", "L D", "D R", "D U L", "R D" }
+		},
+		new string[5, 5] {
+			{ "U D L", "U R", "N R L", "U L", "U R" },
+			{ "U L", "D", "R D", "R L", "R D L" },
+			{ "L", "U", "U D", "D", "U R" },
+			{ "R L", "R D L", "U R L", "U D L", "R" },
+			{ "D L", "U D", "R D", "U D L", "R D" }
+		},
+		new string[5, 5] {
+			{ "U L", "U R D", "N L", "U R D", "L U R" },
+			{ "L D", "U D", "D", "U D", "R" },
+			{ "L U D", "U", "U", "U", "D R" },
+			{ "L U R", "R L", "R L", "L D", "U R" },
+			{ "D L", "D R", "L D", "U D R", "L R D" }
+		},
+		new string[5, 5] {
+			{ "U L D", "U R", "L N D", "U", "U R" },
+			{ "L U", "D", "D U", "D R", "L R" },
+			{ "L", "U R", "U L", "U", "R D" },
+			{ "L D R", "L R D", "R L", "L", "U R" },
+			{ "D L U", "D U", " D R", "L D R", " L D R" }
+		},
+		new string[5, 5] {
+			{ "U L",   "U",     "N D",   "U R", "L U R" },
+			{ "L D R", "L R",   "L U R", "L D", "R" },
+			{ "L U",   "D",     "D R",   "L U", "D R" },
+			{ "L R",   "U D L", "R U",   "D L", "R U" },
+			{ "D L",   "U D R",     "D L",     "U D", "R D" }
+		},
+		new string[5, 5] {
+			{ "U L",   "U R", "L D N", "U D",   "U R"   },
+			{ "L R",   "L",   "U R D", "U L",   "D R"   },
+			{ "L R",   "L",   "U D",   "",      "U R"   },
+			{ "L R D", "L R", "U L",   "R D",   "L R"   },
+			{ "D L U", "R D", "D L",   "D U R", "L R D" }
+		},
+		new string[5, 5] {
+			{ "U L", "U", "N D", "U D", "U R"},
+			{ "L R", "L D R", "L U", "U R", "L R"},
+			{ "L R", "U D L", "D R", "L", "R"},
+			{ "L D", "U R", "U D L", "R D", "L R"},
+			{ "D L U", "D", "D R U", "D L U", "R D"}
+		},
+		new string[5, 5] {
+			{ "U L D", "U R",   "R N L", "U L R", "L U R" },
+			{ "L U",   "R",     "R L",   "L",     "D R" },
+			{ "L R",   "L D",   "R",     "L D",   "U R" },
+			{ "L R",   "L R U", "L D",   "U R",   "L R" },
+			{ "D L R", "L D",   "U D",   "D",     "R D" }
+		},
+		new string[5, 5] {
+			{ "U L",   "U D",   "N R",   "U L",   "U R D" },
+			{ "L R",   "U L",   "D",     "D",     "U R" },
+			{ "L R",   "L D",   "U R D", "U L D", "R" },
+			{ "L D",   "U R D", "U L",   "U R",   "L R" },
+			{ "D L U", "U D",   "D R",   "L D",   "R D" }
+		},
+		new string[5, 5] {
+			{ "U L R", "L U D", "N R", "L U", "U R"   },
+			{ "L D",   "U R",   "L R", "L R", "L R D" },
+			{ "L U R", "D L",   "D",   "",    "D R"     },
+			{ "L",     "U R",   "U L", "",    "U D R"     },
+			{ "D L R", "D L",   "D R", "D",   "U R D"   }
+		}
+	};
 
-    protected KMSelectable[] ProcessTwitchCommand(string TPInput)
-    {
-        string tpinput = TPInput.ToLowerInvariant();
-        bool Incomp = false;
-        List<KMSelectable> Moves = new List<KMSelectable>();
-        if (tpinput == "reset")
-        {
-            Moves.Add(Reset);
-        }
-        else
-        {
+	public string TwitchHelpMessage = "Use !{0} nwse or !{0} uldr to move North West South East. Use !{0} reset to reset back to the start.";
 
-            foreach (char c in tpinput)
-            {
-                if (c == 'n' || c == 'u')
-                {
-                    Moves.Add(North);
-                }
-                else if (c == 'e' || c == 'r')
-                {
-                    Moves.Add(East);
-                }
-                else if (c == 's' || c == 'd')
-                {
-                    Moves.Add(South);
-                }
-                else if (c == 'w' || c == 'l')
-                {
-                    Moves.Add(West);
-                }
-                else if (c == ' ')
-                {
-                }
-                else
-                {
-                    Moves.Clear();
-                    Incomp = true;
-                }
-            }
-        }
-        if (Incomp == false)
-        {
-            KMSelectable[] MovesArray = Moves.ToArray();
-            return MovesArray;
-        }
-        else
-        {
-            return null;
-        }
-    }
+	KMSelectable[] ProcessTwitchCommand(string input)
+	{
+		List<KMSelectable> Buttons = new List<KMSelectable>();
 
-    int GetSolvedCount()
-    {
-        return BombInfo.GetSolvedModuleNames().Count;
-    }
+		string cleanInput = input.ToLowerInvariant().Replace(" ", "");
+		foreach (char character in cleanInput)
+		{
+			switch (character)
+			{
+				case 'n':
+				case 'u':
+					Buttons.Add(North);
+					break;
+				case 'e':
+				case 'r':
+					Buttons.Add(East);
+					break;
+				case 's':
+				case 'd':
+					Buttons.Add(South);
+					break;
+				case 'w':
+				case 'l':
+					Buttons.Add(West);
+					break;
+				default:
+					return null;
+			}
+		}
 
-    protected void Start()
-    {
-        BlindMaze_moduleId = BlindMaze_moduleIdCounter++;
-        int ColNorth = UnityEngine.Random.Range(1, 6);
-        int ColEast = UnityEngine.Random.Range(1, 6);
-        int ColSouth = UnityEngine.Random.Range(1, 6);
-        int ColWest = UnityEngine.Random.Range(1, 6);
+		return Buttons.ToArray();
+	}
 
+	int GetSolvedCount()
+	{
+		return BombInfo.GetSolvedModuleNames().Count;
+	}
 
-        Reset.OnInteract += HandlePressReset;
-        //check what the serial ends with and make an integer for it
-        LastDigit = BombInfo.GetSerialNumberNumbers().Last();
+	void UpdatePosition(int xOffset = 0, int yOffset = 0, bool log = false)
+	{
+		CurX += xOffset;
+		CurY += yOffset;
+		
+		if (CurX == 2 && CurY == -1) // They just moved out of the maze.
+		{
+			BombModule.HandlePass();
+			Solved = true;
+			DebugLog("Module defused");
+		}
+		else
+		{
+			CurrentP = MazeWalls[CurY, CurX];
+			if (log) DebugLog("Moved to ({0}, {1})", CurX + 1, CurY + 1);
+		}
+	}
 
+	int mod(int x, int m)
+	{
+		return (x % m + m) % m;
+	}
 
-        //Determine Values of the Knobs and Color the knobs 1RED 2GREEN 3WHITE 4GREY 5 YELLOW
-        string ColNorthName = "";
-        string ColEastName = "";
-        string ColSouthName = "";
-        string ColWestName = "";
-        if (ColNorth == 1)
-        {
-            NumNorth = 1;
-            NorthMesh.material.color = Color.red;
-            REDKEY++;
-            ColNorthName = "red";
-        }
-        if (ColNorth == 2)
-        {
-            NumNorth = 5;
-            NorthMesh.material.color = Color.green;
-            ColNorthName = "green";
-        }
-        if (ColNorth == 3)
-        {
-            NumNorth = 2;
-            NorthMesh.material.color = Color.white;
-            ColNorthName = "white";
-        }
-        if (ColNorth == 4)
-        {
-            NumNorth = 2;
-            NorthMesh.material.color = Color.grey;
-            ColNorthName = "grey";
-        }
-        if (ColNorth == 5)
-        {
-            NumNorth = 3;
-            NorthMesh.material.color = Color.yellow;
-            NOYELLOW = false;
-            ColNorthName = "yellow";
-        }
+	int[,] colorTable = new int[4, 5] {
+		// Red Green White Gray Yellow
+		{ 1, 5, 2, 2, 3 },	// North
+		{ 3, 1, 5, 5, 2},	// East
+		{ 2, 5, 3, 1, 4},	// West
+		{ 3, 2, 4, 3, 2}	// South
+	};
 
-        if (ColEast == 1)
-        {
-            NumEast = 3;
-            EastMesh.material.color = Color.red;
-            REDKEY++;
-            ColEastName = "red";
-        }
-        if (ColEast == 2)
-        {
-            NumEast = 1;
-            EastMesh.material.color = Color.green;
-            ColEastName = "green";
-        }
-        if (ColEast == 3)
-        {
-            NumEast = 5;
-            EastMesh.material.color = Color.white;
-            ColEastName = "white";
-        }
-        if (ColEast == 4)
-        {
-            NumEast = 5;
-            EastMesh.material.color = Color.grey;
-            ColEastName = "grey";
-        }
-        if (ColEast == 5)
-        {
-            NumEast = 2;
-            EastMesh.material.color = Color.yellow;
-            NOYELLOW = false;
-            ColEastName = "yellow";
-        }
+	string[] buttonNames = { "North", "East", "South", "West" };
+	string[] colorNames = { "red", "green", "white", "gray", "yellow" };
+	Color[] colors = { Color.red, Color.green, Color.white, Color.gray, Color.yellow };
 
-        if (ColSouth == 1)
-        {
-            NumSouth = 3;
-            SouthMesh.material.color = Color.red;
-            REDKEY++;
-            ColSouthName = "red";
-        }
-        if (ColSouth == 2)
-        {
-            NumSouth = 2;
-            SouthMesh.material.color = Color.green;
-            ColSouthName = "green";
-        }
-        if (ColSouth == 3)
-        {
-            NumSouth = 4;
-            SouthMesh.material.color = Color.white;
-            ColSouthName = "white";
-        }
-        if (ColSouth == 4)
-        {
-            NumSouth = 3;
-            SouthMesh.material.color = Color.grey;
-            ColSouthName = "grey";
-        }
-        if (ColSouth == 5)
-        {
-            NumSouth = 2;
-            SouthMesh.material.color = Color.yellow;
-            NOYELLOW = false;
-            ColSouthName = "yellow";
-        }
+	void Start()
+	{
+		moduleId = moduleIdCounter++;
 
-        if (ColWest == 1)
-        {
-            NumWest = 2;
-            WestMesh.material.color = Color.red;
-            REDKEY++;
-            ColWestName = "red";
-        }
-        if (ColWest == 2)
-        {
-            NumWest = 5;
-            WestMesh.material.color = Color.green;
-            ColWestName = "green";
-        }
-        if (ColWest == 3)
-        {
-            NumWest = 3;
-            WestMesh.material.color = Color.white;
-            ColWestName = "white";
-        }
-        if (ColWest == 4)
-        {
-            NumWest = 1;
-            WestMesh.material.color = Color.grey;
-            ColWestName = "grey";
-        }
-        if (ColWest == 5)
-        {
-            NumWest = 4;
-            WestMesh.material.color = Color.yellow;
-            NOYELLOW = false;
-            ColWestName = "yellow";
-        }
+		//check what the serial ends with and make an integer for it
+		LastDigit = BombInfo.GetSerialNumberNumbers().Last();
 
-        //Look for mazebased modules
-        if (BombInfo.GetModuleNames().Contains("Mouse In The Maze"))
-        { MazeBased++; }
-        if (BombInfo.GetModuleNames().Contains("3D Maze"))
-        { MazeBased++; }
-        if (BombInfo.GetModuleNames().Contains("Hexamaze"))
-        { MazeBased++; }
-        if (BombInfo.GetModuleNames().Contains("Maze"))
-        { MazeBased++; }
-        if (BombInfo.GetModuleNames().Contains("Morse-A-Maze"))
-        { MazeBased++; }
-        if (BombInfo.GetModuleNames().Contains("Blind Maze"))
-        { MazeBased++; }
-        if (BombInfo.GetModuleNames().Contains("Polyhedral Maze"))
-        { MazeBased++; }
+		int SumNS = 4;
+		int SumEW = 4;
 
-        
-        //determine rotation
-        int MazeRule;
-        if (BombInfo.GetBatteryCount(KMBI.KnownBatteryType.D) == 1 && BombInfo.GetBatteryCount(KMBI.KnownBatteryType.AA) == 0)
-        {
-            MazeRot = 20;
-            MazeRule = 1;
-        }
-        else if (BombInfo.GetPorts().Distinct().Count() < 3)
-        {
-            MazeRot = 40;
-            MazeRule = 2;
-        }
-        else if (BombInfo.GetSerialNumberLetters().Any("AEIOU".Contains) && BombInfo.GetOnIndicators().Contains("IND"))
-        {
-            MazeRot = 30;
-            MazeRule = 3;
-        }
-        else if (REDKEY > 0 && NOYELLOW == true)
-        {
-            MazeRot = 40;
-            MazeRule = 4;
-        }
-        else if (MazeBased > 2)
-        {
-            MazeRot = 30;
-            MazeRule = 5;
-        }
-        else if (BombInfo.GetOffIndicators().Contains("MSA") && REDKEY > 1)
-        {
-            MazeRot = 20;
-            MazeRule = 6;
-        }
-        else
-        {
-            MazeRot = 10;
-            MazeRule = 7;
-        }
+		int REDKEY = 0;
+		bool NOYELLOW = true;
 
-        SumNS = (NumSouth + NumNorth + 4) % 5;
-        SumEW = (NumEast + NumWest + 4) % 5;
+		MeshRenderer[] buttonRenderers = { NorthMesh, EastMesh, SouthMesh, WestMesh };
+		for (int i = 0; i < 4; i++)
+		{
+			int colorNum = UnityEngine.Random.Range(0, 5);
+			buttonRenderers[i].material.color = colors[colorNum];
 
-        //Determine Current Position
-        if (MazeRot == 10)
-        {
-            North.OnInteract += HandlePressN;
-            East.OnInteract += HandlePressE;
-            South.OnInteract += HandlePressS;
-            West.OnInteract += HandlePressW;
-            CurX = SumNS;
-            CurY = SumEW;
-        }
-        if (MazeRot == 20)
-        {
-            North.OnInteract += HandlePressW;
-            East.OnInteract += HandlePressN;
-            South.OnInteract += HandlePressE;
-            West.OnInteract += HandlePressS;
-            CurX = SumEW;
-            CurY = 4 - SumNS;
-        }
-        if (MazeRot == 30)
-        {
-            North.OnInteract += HandlePressS;
-            East.OnInteract += HandlePressW;
-            South.OnInteract += HandlePressN;
-            West.OnInteract += HandlePressE;
-            CurX = 4 - SumNS;
-            CurY = 4 - SumEW;
-        }
-        if (MazeRot == 40)
-        {
-            North.OnInteract += HandlePressE;
-            East.OnInteract += HandlePressS;
-            South.OnInteract += HandlePressW;
-            West.OnInteract += HandlePressN;
-            CurX = 4 - SumEW;
-            CurY = SumNS;
-        }
-        StartX = CurX;
-        StartY = CurY;
-        DebugLog("Maze Rotation is {0} degrees clockwise because of rule {1}", MazeRot * 9 - 90, MazeRule);
-        DebugLog("North Key is {0}, making it's value {1}", ColNorthName, NumNorth);
-        DebugLog("East Key is {0}, making it's value {1}", ColEastName, NumEast);
-        DebugLog("South Key is {0}, making it's value {1}", ColSouthName, NumSouth);
-        DebugLog("West Key is {0}, making it's value {1}", ColWestName, NumWest);
+			int value = colorTable[i, colorNum];
+			DebugLog("{0} Key is {1}, making it's value {2}", buttonNames[i], colorNames[colorNum], value);
 
-        DebugLog("Starting Location is [{0},{1}]", SumNS + 1, SumEW + 1);
-    }
+			if (colorNum == 0) REDKEY++; // Red is index 0.
+			else if (colorNum == 4) NOYELLOW = false; // Yellow is index 4.
 
-    protected bool HandlePressN()
-    {
-        Audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.ButtonPress, transform);
-        North.AddInteractionPunch(0.5f);
+			if (i % 2 == 0) SumNS += value; // North and South are both on even indexes
+			else SumEW += value; // East and West are both on odd indexes
+		}
+		
+		SumNS = SumNS % 5;
+		SumEW = SumEW % 5;
 
-        if (SOLVED)
-        {
-            if (CurrentP.Contains("N"))
-            {
-                {
-                    BombModule.HandlePass();
-                    SOLVED = false;
-                    DebugLog("The module has been defused.");
-                }
-            }
-            else
-            {
-                if (CurrentP.Contains("U"))
-                {
-                    BombModule.HandleStrike();
-                }
-                else
-                {
-                    CurY--;
-                    DebugLog("X = {0}, Y = {1}", CurX + 1, CurY + 1);
-                }
+		// Look for mazebased modules
+		string[] MazeModules = new[] { "Mouse In The Maze", "3D Maze", "Hexamaze", "Morse-A-Maze", "Blind Maze", "Polyhedral Maze" };
+		int MazeBased = BombInfo.GetModuleNames().Intersect(MazeModules).Count();
 
-            }
-        }
-        return false;
-    }
+		// Determine rotation
+		int MazeRule;
+		if (BombInfo.GetBatteryCount(KMBI.KnownBatteryType.D) == 1 && BombInfo.GetBatteryCount(KMBI.KnownBatteryType.AA) == 0)
+		{
+			MazeRot = 1;
+			MazeRule = 1;
+		}
+		else if (BombInfo.GetPorts().Distinct().Count() < 3)
+		{
+			MazeRot = 3;
+			MazeRule = 2;
+		}
+		else if (BombInfo.GetSerialNumberLetters().Any("AEIOU".Contains) && BombInfo.GetOnIndicators().Contains("IND"))
+		{
+			MazeRot = 2;
+			MazeRule = 3;
+		}
+		else if (REDKEY > 0 && NOYELLOW == true)
+		{
+			MazeRot = 3;
+			MazeRule = 4;
+		}
+		else if (MazeBased > 2)
+		{
+			MazeRot = 2;
+			MazeRule = 5;
+		}
+		else if (BombInfo.GetOffIndicators().Contains("MSA") && REDKEY > 1)
+		{
+			MazeRot = 1;
+			MazeRule = 6;
+		}
+		else
+		{
+			MazeRot = 0;
+			MazeRule = 7;
+		}
 
-    protected bool HandlePressE()
-    {
-        Audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.ButtonPress, transform);
-        East.AddInteractionPunch(0.5f);
+		DebugLog("Maze Rotation is {0} degrees clockwise because of rule {1}", MazeRot * 90, MazeRule);
 
-        if (SOLVED)
-        {
+		KMSelectable[] directions = new[] { North, East, South, West };
+		ButtonInfo[] buttonInfo = new[]
+		{
+			new ButtonInfo(0, -1, "U"),
+			new ButtonInfo(1, 0, "R"),
+			new ButtonInfo(0, 1, "D"),
+			new ButtonInfo(-1, 0, "L")
+		};
 
-            if (CurrentP.Contains("R"))
-            {
-                BombModule.HandleStrike();
-            }
-            else
-            {
-                CurX++;
-                DebugLog("X = {0}, Y = {1}", CurX + 1, CurY + 1);
-            }
-        }
+		for (int i = 0; i < 4; i++)
+		{
+			directions[i].OnInteract += GetInteractHandler(directions[i], buttonInfo[mod(-MazeRot + i, 4)]);
+		}
 
-        return false;
-    }
+		Reset.OnInteract += GetInteractHandler(Reset, new ButtonInfo(0, 0, null, true));
 
-    protected bool HandlePressS()
-    {
-        Audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.ButtonPress, transform);
-        South.AddInteractionPunch(0.5f);
+		//Determine Current Position
+		switch (MazeRot)
+		{
+			case 0:
+				CurX = SumNS;
+				CurY = SumEW;
+				break;
+			case 1:
+				CurX = SumEW;
+				CurY = 4 - SumNS;
+				break;
+			case 2:
+				CurX = 4 - SumNS;
+				CurY = 4 - SumEW;
+				break;
+			case 3:
+				CurX = 4 - SumEW;
+				CurY = SumNS;
+				break;
+		}
+		UpdatePosition();
 
-        if (SOLVED)
-        {
+		StartX = CurX;
+		StartY = CurY;
 
-            if (CurrentP.Contains("D"))
-            {
-                BombModule.HandleStrike();
-            }
-            else
-            {
-                CurY = CurY + 1;
-                DebugLog("X = {0}, Y = {1}", CurX + 1, CurY + 1);
-            }
-        }
-        return false;
-    }
+		DebugLog("Rotated starting location is ({0}, {1}). Non-rotated is ({2}, {3})", SumNS + 1, SumEW + 1, CurX, CurY);
+	}
 
-    protected bool HandlePressW()
-    {
-        Audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.ButtonPress, transform);
-        West.AddInteractionPunch(0.5f);
+	KMSelectable.OnInteractHandler GetInteractHandler(KMSelectable selectable, ButtonInfo buttonInfo)
+	{
+		return delegate ()
+		{
+			Audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.ButtonPress, transform);
+			selectable.AddInteractionPunch(0.5f);
 
-        if (SOLVED)
-        {
+			if (!Solved)
+			{
+				if (buttonInfo.resetButton)
+				{
+					CurX = StartX;
+					CurY = StartY;
+					UpdatePosition();
+					DebugLog("Resetted, now at ({0}, {1})", CurX + 1, CurY + 1);
+				}
+				else if (CurrentP.Contains(buttonInfo.invalidDirection))
+					BombModule.HandleStrike();
+				else
+					UpdatePosition(buttonInfo.xOffset, buttonInfo.yOffset, true);
+			}
 
-            if (CurrentP.Contains("L"))
-            {
-                BombModule.HandleStrike();
-            }
-            else
-            {
-                CurX = CurX - 1;
-                DebugLog("X = {0}, Y = {1}", CurX + 1, CurY + 1);
-            }
-        }
-        return false;
-    }
-
-    protected bool HandlePressReset()
-    {
-        Audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.ButtonPress, transform);
-        Reset.AddInteractionPunch(0.5f);
-
-        if (SOLVED)
-        {
-            CurX = StartX;
-            CurY = StartY;
-        }
-
-        return false;
-    }
+			return false;
+		};
+	}
 
     private void Update()
     {
-        MazeNumber = (LastDigit + GetSolvedCount()) % 10;
-        if (currentMaze != GetSolvedCount() && SOLVED)
+        int MazeNumber = (LastDigit + GetSolvedCount()) % 10;
+        if (currentMaze != GetSolvedCount() && !Solved)
         {
             currentMaze = GetSolvedCount();
             DebugLog("The Maze Number is now {0}", MazeNumber);
+			MazeWalls = Mazes[MazeNumber];
+			UpdatePosition();
         }
-
-        if (MazeNumber == 1)
-        {
-            MazeWalls = new string[5, 5] {
-                 { "U D L", "U R", "N R L", "U L", "U R" },
-                 { "U L", "D", "R D", "R L", "R D L" },
-                 { "L", "U", "U D", "D", "U R" },
-                 { "R L", "R D L", "U R L", "U D L", "R" },
-                 { "D L", "U D", "R D", "U D L", "R D" }
-            };
-        }
-        if (MazeNumber == 0)
-        {
-            MazeWalls = new string[5, 5] {
-                 { "U L", "U", "N D R", "L U", "U R" },
-                 { "L R", "D L ", "U", "D R", "L R" },
-                 { "L D", "U R", "L D", "U R", "L D R" },
-                 { "L U", "R", "L U R", "D L", "U R" },
-                 { "D L R", "L D", "D R", "D U L", "R D" }
-            };
-        }
-        if (MazeNumber == 2)
-        {
-            MazeWalls = new string[5, 5] {
-                 { "U L", "U R D", "N L", "U R D", "L U R" },
-                 { "L D", "U D", "D", "U D", "R" },
-                 { "L U D", "U", "U", "U", "D R" },
-                 { "L U R", "R L", "R L", "L D", "U R" },
-                 { "D L", "D R", "L D", "U D R", "L R D" }
-            };
-        }
-        if (MazeNumber == 3)
-        {
-            MazeWalls = new string[5, 5] {
-                 { "U L D", "U R", "L N D", "U", "U R" },
-                 { "L U", "D", "D U", "D R", "L R" },
-                 { "L", "U R", "U L", "U", "R D" },
-                 { "L D R", "L R D", "R L", "L", "U R" },
-                 { "D L U", "D U", " D R", "L D R", " L D R" }
-            };
-        }
-        if (MazeNumber == 4)
-        {
-            MazeWalls = new string[5, 5] {
-                 { "U L",   "U",     "N D",   "U R", "L U R" },
-                 { "L D R", "L R",   "L U R", "L D", "R" },
-                 { "L U",   "D",     "D R",   "L U", "D R" },
-                 { "L R",   "U D L", "R U",   "D L", "R U" },
-                 { "D L",   "U D R",     "D L",     "U D", "R D" }
-            };
-        }
-        if (MazeNumber == 5)
-        {
-            MazeWalls = new string[5, 5] {
-                 { "U L",   "U R", "L D N", "U D",   "U R"   },
-                 { "L R",   "L",   "U R D", "U L",   "D R"   },
-                 { "L R",   "L",   "U D",   "",      "U R"   },
-                 { "L R D", "L R", "U L",   "R D",   "L R"   },
-                 { "D L U", "R D", "D L",   "D U R", "L R D" }
-            };
-        }
-        if (MazeNumber == 6)
-        {
-            MazeWalls = new string[5, 5] {
-                 { "U L", "U", "N D", "U D", "U R"},
-                 { "L R", "L D R", "L U", "U R", "L R"},
-                 { "L R", "U D L", "D R", "L", "R"},
-                 { "L D", "U R", "U D L", "R D", "L R"},
-                 { "D L U", "D", "D R U", "D L U", "R D"}
-            };
-        }
-        if (MazeNumber == 7)
-        {
-            MazeWalls = new string[5, 5] {
-                 { "U L D", "U R",   "R N L", "U L R", "L U R" },
-                 { "L U",   "R",     "R L",   "L",     "D R" },
-                 { "L R",   "L D",   "R",     "L D",   "U R" },
-                 { "L R",   "L R U", "L D",   "U R",   "L R" },
-                 { "D L R", "L D",   "U D",   "D",     "R D" }
-            };
-        }
-        if (MazeNumber == 8)
-        {
-            MazeWalls = new string[5, 5] {
-                 { "U L",   "U D",   "N R",   "U L",   "U R D" },
-                 { "L R",   "U L",   "D",     "D",     "U R" },
-                 { "L R",   "L D",   "U R D", "U L D", "R" },
-                 { "L D",   "U R D", "U L",   "U R",   "L R" },
-                 { "D L U", "U D",   "D R",   "L D",   "R D" }
-            };
-        }
-        if (MazeNumber == 9)
-        {
-            MazeWalls = new string[5, 5] {
-                 { "U L R", "L U D", "N R", "L U", "U R"   },
-                 { "L D",   "U R",   "L R", "L R", "L R D" },
-                 { "L U R", "D L",   "D",   "",    "D R"     },
-                 { "L",     "U R",   "U L", "",    "U D R"     },
-                 { "D L R", "D L",   "D R", "D",   "U R D"   }
-            };
-        }
-
-
-        CurrentP = MazeWalls[CurY, CurX];
     }
 
     private void DebugLog(string log, params object[] args)
     {
         var logData = string.Format(log, args);
-        Debug.LogFormat("[Blind Maze #{0}]: {1}", BlindMaze_moduleId, logData);
+        Debug.LogFormat("[Blind Maze #{0}]: {1}", moduleId, logData);
     }
 }
