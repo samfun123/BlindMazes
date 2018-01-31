@@ -162,6 +162,8 @@ public class BlindMaze : MonoBehaviour
 				case 'l':
 					Buttons.Add(West);
 					break;
+                case ' ':
+                    break;
 				default:
 					return null;
 			}
@@ -205,8 +207,8 @@ public class BlindMaze : MonoBehaviour
 		// Red Green White Gray Yellow
 		{ 1, 5, 2, 2, 3 },	// North
 		{ 3, 1, 5, 5, 2},	// East
-		{ 2, 5, 3, 1, 4},	// West
-		{ 3, 2, 4, 3, 2}	// South
+		{ 3, 2, 4, 3, 2},	// South
+        { 2, 5, 3, 1, 4}	// West
 	};
 
 	string[] buttonNames = { "North", "East", "South", "West" };
