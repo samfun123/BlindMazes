@@ -1558,20 +1558,24 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Parent: {fileID: 0}
   Children:
-  - {fileID: 114797931151752114}
+  - {fileID: 0}
   - {fileID: 114903856909655866}
-  - {fileID: 114001567017494000}
+  - {fileID: 0}
   - {fileID: 114263796393695436}
+  - {fileID: 0}
+  - {fileID: 114797931151752114}
   - {fileID: 114245006596320900}
-  IsPassThrough: 1
-  ChildRowLength: 0
+  - {fileID: 114001567017494000}
+  - {fileID: 0}
+  IsPassThrough: 0
+  ChildRowLength: 3
   Highlight: {fileID: 114016167573626778}
   SelectableColliders: []
   DefaultSelectableIndex: 0
   AllowSelectionWrapX: 0
   AllowSelectionWrapY: 0
   ForceSelectionHighlight: 0
-  ForceInteractionHighlight: 1
+  ForceInteractionHighlight: 0
 --- !u!114 &114797931151752114
 MonoBehaviour:
   m_ObjectHideFlags: 1
